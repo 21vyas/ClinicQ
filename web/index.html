@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta content="IE=Edge" http-equiv="X-UA-Compatible">
+  <meta name="description" content="ClinicQ - Smart Hospital Queue Management">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+ 
+  <!-- PWA meta -->
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="ClinicQ">
+  <meta name="theme-color" content="#0A5C5C">
+ 
+  <!-- Manifest & icons -->
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" type="image/png" href="favicon.png">
+  <link rel="apple-touch-icon" href="icons/Icon-192.png">
+ 
+  <title>ClinicQ</title>
+ 
+  <!-- Splash screen style -->
+  <style>
+    :root { --primary: #0A5C5C; }
+ 
+    body {
+      margin: 0;
+      background-color: var(--primary);
+      overflow: hidden;
+    }
+ 
+    #splash {
+      position: fixed;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      background-color: var(--primary);
+      z-index: 9999;
+      transition: opacity 0.4s ease;
+    }
+ 
+    #splash.fade-out { opacity: 0; pointer-events: none; }
+ 
+    .splash-icon {
+      width: 80px;
+      height: 80px;
+      background: rgba(255,255,255,0.12);
+      border: 1.5px solid rgba(255,255,255,0.3);
+      border-radius: 24px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 20px;
+      animation: pulse 2s infinite;
+    }
+ 
+    .splash-icon svg { width: 42px; height: 42px; fill: white; }
+ 
+    .splash-title {
+      font-family: Georgia, 'Times New Roman', serif;
+      font-size: 38px;
+      font-weight: 700;
+      color: white;
+      letter-spacing: -0.5px;
+    }
+ 
+    .splash-subtitle {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      font-size: 14px;
+      color: rgba(255,255,255,0.65);
+      margin-top: 8px;
+      letter-spacing: 0.5px;
+    }
+ 
+    @keyframes pulse {
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(1.04); }
+    }
+  </style>
+</head>
+<body>
+  <!-- Native splash (hidden once Flutter loads) -->
+  <div id="splash">
+    <div class="splash-icon">
+      <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+        <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-7 14l-5-5 1.41-1.41L12 14.17l7.59-7.59L21 8l-9 9z"/>
+      </svg>
+    </div>
+    <div class="splash-title">ClinicQ</div>
+    <div class="splash-subtitle">Smart Queue Management</div>
+  </div>
+ 
+  <script>
+    window.addEventListener('flutter-first-frame', function() {
+      var splash = document.getElementById('splash');
+      if (splash) {
+        splash.classList.add('fade-out');
+        setTimeout(function() { splash.remove(); }, 400);
+      }
+    });
+  </script>
+ 
+  <script src="flutter_bootstrap.js" async></script>
+</body>
+</html>
+ 
