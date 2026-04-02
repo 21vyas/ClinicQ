@@ -369,7 +369,7 @@ class _CheckInPageState extends ConsumerState<CheckInPage>
                         _FieldLabel('Reason for Visit', required: false),
                         const SizedBox(height: 6),
                         DropdownButtonFormField<String>(
-                          value: _selectedReason,
+                          initialValue: _selectedReason,
                           decoration: _dec(hint: 'Select reason', icon: Icons.medical_services_outlined),
                           icon: const Icon(Icons.keyboard_arrow_down_rounded, color: AppColors.textSecondary),
                           borderRadius: BorderRadius.circular(12),

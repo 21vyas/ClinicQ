@@ -351,7 +351,7 @@ class _TopBar extends StatelessWidget {
             // Live indicator
             AnimatedBuilder(
               animation: tickCtrl,
-              builder: (_, __) => Row(
+              builder: (_, _) => Row(
                 children: [
                   Container(
                     width: 8, height: 8,

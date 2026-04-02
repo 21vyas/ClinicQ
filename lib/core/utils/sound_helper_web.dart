@@ -10,7 +10,7 @@ void playTokenChangeSound() {
     // Create a fresh AudioContext each time to avoid state issues
     final ctx = AudioContext();
 
-    void _tone(double freq, double startAt, double duration, double peak) {
+    void tone(double freq, double startAt, double duration, double peak) {
       final osc  = ctx.createOscillator();
       final gain = ctx.createGain();
 
@@ -32,8 +32,8 @@ void playTokenChangeSound() {
     }
 
     // Two ascending tones: D5 → A5 (pleasant notification chime)
-    _tone(587.3, 0.00, 0.45, 0.28); // D5
-    _tone(880.0, 0.20, 0.55, 0.22); // A5
+    tone(587.3, 0.00, 0.45, 0.28); // D5
+    tone(880.0, 0.20, 0.55, 0.22); // A5
 
     // Close context after sounds finish to free resources
     Future.delayed(const Duration(milliseconds: 900), () {

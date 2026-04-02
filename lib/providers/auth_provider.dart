@@ -31,7 +31,7 @@ class AppUserNotifier extends AsyncNotifier<AppUser?> {
   @override
   Future<AppUser?> build() async {
     // Re-fetch whenever auth state changes
-    ref.listen(authStateProvider, (_, __) => refresh());
+    ref.listen(authStateProvider, (_, _) => refresh());
     return _fetch();
   }
  
@@ -56,7 +56,7 @@ final appUserProvider = AsyncNotifierProvider<AppUserNotifier, AppUser?>(
 class HospitalNotifier extends AsyncNotifier<Hospital?> {
   @override
   Future<Hospital?> build() async {
-    ref.listen(appUserProvider, (_, __) => refresh());
+    ref.listen(appUserProvider, (_, _) => refresh());
     return _fetch();
   }
  

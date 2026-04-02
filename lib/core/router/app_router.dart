@@ -20,7 +20,7 @@ import '../../core/constants/app_constants.dart';
 
 final routerProvider = Provider<GoRouter>((ref) {
   final authNotifier = _AuthChangeNotifier();
-  ref.listen(authStateProvider, (_, __) => authNotifier.notify());
+  ref.listen(authStateProvider, (_, _) => authNotifier.notify());
 
   return GoRouter(
     initialLocation: '/',
@@ -51,7 +51,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       return null;
     },
     routes: [
-      GoRoute(path: '/', builder: (_, __) => const SplashScreen()),
+      GoRoute(path: '/', builder: (_, _) => const SplashScreen()),
 
       // ── Public (patient + TV) ────────────────────────────
       GoRoute(
@@ -73,7 +73,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       // ── OAuth callback ───────────────────────────────────
       GoRoute(
         path: '/auth/callback',
-        builder: (_, __) => const AuthCallbackPage(),
+        builder: (_, _) => const AuthCallbackPage(),
       ),
 
       // ── Auth ─────────────────────────────────────────────
@@ -125,7 +125,7 @@ CustomTransitionPage<void> _fadePage(GoRouterState state, Widget child) {
     key: state.pageKey,
     child: child,
     transitionDuration: const Duration(milliseconds: 250),
-    transitionsBuilder: (_, animation, __, c) =>
+    transitionsBuilder: (_, animation, _, c) =>
         FadeTransition(opacity: animation, child: c),
   );
 }

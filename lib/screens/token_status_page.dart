@@ -508,7 +508,7 @@ class _WaitProgressCard extends StatelessWidget {
               tween: Tween(begin: 0, end: progressValue),
               duration: const Duration(milliseconds: 600),
               curve: Curves.easeOut,
-              builder: (_, v, __) => LinearProgressIndicator(
+              builder: (_, v, _) => LinearProgressIndicator(
                 value: v,
                 minHeight: 10,
                 backgroundColor: AppColors.surfaceVariant,
@@ -749,7 +749,7 @@ class _LiveIndicatorState extends State<_LiveIndicator>
     if (!widget.isActive) return const SizedBox.shrink();
     return AnimatedBuilder(
       animation: _ctrl,
-      builder: (_, __) => Row(
+      builder: (_, _) => Row(
         children: [
           Container(
             width: 8, height: 8,

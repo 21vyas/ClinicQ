@@ -115,8 +115,11 @@ class _DashboardShellState extends ConsumerState<_DashboardShell>
     final err = await n.callNext();
     if (!mounted) return;
     setState(() => _lastUpdated = DateTime.now());
-    if (err != null) _showSnack(err, isError: true);
-    else _showSnack('Next patient called!', isError: false);
+    if (err != null) {
+      _showSnack(err, isError: true);
+    } else {
+      _showSnack('Next patient called!', isError: false);
+    }
   }
 
   Future<void> _completeToken(String entryId) async {
@@ -124,8 +127,11 @@ class _DashboardShellState extends ConsumerState<_DashboardShell>
     final err = await n.completeToken(entryId);
     if (!mounted) return;
     setState(() => _lastUpdated = DateTime.now());
-    if (err != null) _showSnack(err, isError: true);
-    else _showSnack('Patient marked as done.', isError: false);
+    if (err != null) {
+      _showSnack(err, isError: true);
+    } else {
+      _showSnack('Patient marked as done.', isError: false);
+    }
   }
 
   Future<void> _skipEntry(String entryId, int token) async {
@@ -153,8 +159,11 @@ class _DashboardShellState extends ConsumerState<_DashboardShell>
     final n = ref.read(queueTodayProvider(widget.hospitalId).notifier);
     final err = await n.resetQueue();
     if (!mounted) return;
-    if (err != null) _showSnack(err, isError: true);
-    else _showSnack('Queue has been reset.', isError: false);
+    if (err != null) {
+      _showSnack(err, isError: true);
+    } else {
+      _showSnack('Queue has been reset.', isError: false);
+    }
   }
 
   Future<bool?> _confirmDialog({
@@ -1166,7 +1175,7 @@ class _QueueList extends StatelessWidget {
     return ListView.separated(
       padding: const EdgeInsets.all(16),
       itemCount: entries.length,
-      separatorBuilder: (_, __) => const SizedBox(height: 8),
+      separatorBuilder: (_, _) => const SizedBox(height: 8),
       itemBuilder: (_, i) {
         final e = entries[i];
         return _QueueTile(
@@ -1673,7 +1682,7 @@ class _LiveDotState extends State<_LiveDot>
   Widget build(BuildContext context) {
     return AnimatedBuilder(
       animation: _ctrl,
-      builder: (_, __) => Container(
+      builder: (_, _) => Container(
         width: 7, height: 7,
         decoration: BoxDecoration(
           shape: BoxShape.circle,

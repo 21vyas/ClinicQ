@@ -93,7 +93,7 @@ class DashboardPlaceholder extends ConsumerWidget {
                 ),
                 loading: () =>
                     const CircularProgressIndicator(color: AppColors.primary),
-                error: (_, __) => const Text('Dashboard'),
+                error: (_, _) => const Text('Dashboard'),
               ),
               const SizedBox(height: 8),
               user.when(
@@ -103,7 +103,7 @@ class DashboardPlaceholder extends ConsumerWidget {
                       fontSize: 16, color: AppColors.textSecondary),
                 ),
                 loading: () => const SizedBox.shrink(),
-                error: (_, __) => const SizedBox.shrink(),
+                error: (_, _) => const SizedBox.shrink(),
               ),
               const SizedBox(height: 32),
               Container(
