@@ -1,3 +1,65 @@
 # clinic_q
 
-A new Flutter project.
+ClinicQ uses Supabase for authentication, data access, and realtime updates.
+
+## Environment variables
+
+Create a `.env` file for local development using `.env.example` as a template.
+
+Required values:
+
+- `SUPABASE_URL`: your Supabase project URL
+- `SUPABASE_ANON_KEY`: your Supabase public anon key
+- `BASE_URL`: the public base URL of the app
+
+Example:
+
+```env
+SUPABASE_URL=https://your-project-id.supabase.co
+SUPABASE_ANON_KEY=your-public-anon-key
+BASE_URL=https://your-app.vercel.app
+```
+
+## Which token the app needs
+
+The frontend must use the Supabase `anon` key only. Do not put the Supabase service role key in a Flutter web app.
+
+At runtime the app initializes Supabase with:
+
+- `SUPABASE_URL`
+- `SUPABASE_ANON_KEY`
+
+After a user logs in, Supabase returns and manages the user session tokens automatically:
+
+- `access_token`
+- `refresh_token`
+
+Those user session tokens are not manually supplied anywhere in this codebase.
+
+## Login flow
+
+- Email/password login calls Supabase auth directly.
+- Google login uses OAuth and redirects back to `/auth/callback`.
+
+If Google login works locally but fails on Vercel, make sure these URLs are allowed in Supabase Auth settings:
+
+- `http://localhost:3000/auth/callback`
+- `https://your-app.vercel.app/auth/callback`
+- optionally `https://*.vercel.app/auth/callback` for preview deployments
+
+Also set the Supabase site URL to your production app URL.
+
+## Vercel note
+
+This app reads values from a physical `.env` file at build/runtime startup. Vercel project environment variables are not automatically turned into that file for Flutter web builds.
+
+If you deploy from source on Vercel, generate `.env` during the build before running `flutter build web`.
+
+Example build step:
+
+```sh
+echo "SUPABASE_URL=$SUPABASE_URL" > .env
+echo "SUPABASE_ANON_KEY=$SUPABASE_ANON_KEY" >> .env
+echo "BASE_URL=$BASE_URL" >> .env
+flutter build web
+```
