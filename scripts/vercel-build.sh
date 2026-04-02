@@ -8,6 +8,13 @@ echo "[vercel-build] Starting Flutter web build"
 : "${SUPABASE_ANON_KEY:?SUPABASE_ANON_KEY is required}"
 : "${BASE_URL:?BASE_URL is required}"
 
+echo "[vercel-build] Writing temporary .env for Flutter assets"
+cat > .env <<EOF
+SUPABASE_URL=${SUPABASE_URL}
+SUPABASE_ANON_KEY=${SUPABASE_ANON_KEY}
+BASE_URL=${BASE_URL}
+EOF
+
 if [ ! -d "flutter" ]; then
   echo "[vercel-build] Installing Flutter SDK"
   git clone https://github.com/flutter/flutter.git --depth 1 -b stable flutter

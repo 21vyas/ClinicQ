@@ -51,7 +51,7 @@ Also set the Supabase site URL to your production app URL.
 
 ## Vercel note
 
-This app reads values from a physical `.env` file at build/runtime startup. Vercel project environment variables are not automatically turned into that file for Flutter web builds.
+This app reads values from a physical `.env` file at build/runtime startup. For Vercel deployments, the build script generates that file automatically from Vercel environment variables before running the Flutter build.
 
 If you deploy from source on Vercel, generate `.env` during the build before running `flutter build web`.
 
@@ -91,7 +91,7 @@ Because the app now supports both `.env` and `--dart-define`, this command works
 
 ### Repo-ready Vercel setup
 
-This repository includes [scripts/vercel-build.sh](scripts/vercel-build.sh) and [vercel.json](vercel.json) is configured to call it.
+This repository includes [scripts/vercel-build.sh](scripts/vercel-build.sh) and [vercel.json](vercel.json) is configured to call it. The script writes a temporary `.env` from `SUPABASE_URL`, `SUPABASE_ANON_KEY`, and `BASE_URL`, then builds the web app.
 
 In Vercel project settings, set:
 
