@@ -3,18 +3,41 @@
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 class AppConstants {
+    // ── Compile-time defines (preferred in CI/Vercel) ─────────
+    static const String _supabaseUrlDefine =
+            String.fromEnvironment('SUPABASE_URL');
+    static const String _supabaseAnonKeyDefine =
+            String.fromEnvironment('SUPABASE_ANON_KEY');
+    static const String _baseUrlDefine =
+            String.fromEnvironment('BASE_URL');
+
   // ── Supabase (loaded from .env) ──────────────────────────
   static String get supabaseUrl =>
-      dotenv.env['SUPABASE_URL'] ??
-      (throw Exception('SUPABASE_URL missing in .env'));
+            _firstNonEmpty(_supabaseUrlDefine, dotenv.env['SUPABASE_URL']) ??
+            (throw Exception(
+                'SUPABASE_URL missing. Provide via --dart-define or .env',
+            ));
 
   static String get supabaseAnonKey =>
-      dotenv.env['SUPABASE_ANON_KEY'] ??
-      (throw Exception('SUPABASE_ANON_KEY missing in .env'));
+            _firstNonEmpty(
+                _supabaseAnonKeyDefine,
+                dotenv.env['SUPABASE_ANON_KEY'],
+            ) ??
+            (throw Exception(
+                'SUPABASE_ANON_KEY missing. Provide via --dart-define or .env',
+            ));
 
   static String get baseUrl =>
-      dotenv.env['BASE_URL'] ??
-      (throw Exception('BASE_URL missing in .env'));
+            _firstNonEmpty(_baseUrlDefine, dotenv.env['BASE_URL']) ??
+            (throw Exception(
+                'BASE_URL missing. Provide via --dart-define or .env',
+            ));
+
+    static String? _firstNonEmpty(String? first, String? second) {
+        if (first != null && first.trim().isNotEmpty) return first.trim();
+        if (second != null && second.trim().isNotEmpty) return second.trim();
+        return null;
+    }
 
   // ── App ──────────────────────────────────────────────────
   static const String appName    = 'ClinicQ';

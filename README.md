@@ -63,3 +63,28 @@ echo "SUPABASE_ANON_KEY=$SUPABASE_ANON_KEY" >> .env
 echo "BASE_URL=$BASE_URL" >> .env
 flutter build web
 ```
+
+## Fix for `exit code 127` on Vercel
+
+`127` means the command was not found. In this case, Vercel could not find `flutter` in the build image.
+
+Use one of these approaches:
+
+- Deploy prebuilt output: run `flutter build web` locally/CI and deploy `build/web`.
+- Install Flutter in Vercel build before running the build command.
+
+Example Vercel build command (bash):
+
+```sh
+git clone https://github.com/flutter/flutter.git --depth 1 -b stable
+export PATH="$PWD/flutter/bin:$PATH"
+flutter config --no-analytics
+flutter --version
+flutter pub get
+flutter build web \
+	--dart-define=SUPABASE_URL=$SUPABASE_URL \
+	--dart-define=SUPABASE_ANON_KEY=$SUPABASE_ANON_KEY \
+	--dart-define=BASE_URL=$BASE_URL
+```
+
+Because the app now supports both `.env` and `--dart-define`, this command works without creating a `.env` file in Vercel.

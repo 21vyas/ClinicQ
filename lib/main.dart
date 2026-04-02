@@ -11,8 +11,13 @@ import 'core/router/app_router.dart';
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // 1. Load .env FIRST — before anything reads AppConstants
-  await dotenv.load(fileName: '.env');
+  // 1. Try loading .env for local/dev. In CI/Vercel, values may come from
+  // --dart-define and .env might not exist.
+  try {
+    await dotenv.load(fileName: '.env');
+  } catch (_) {
+    // Ignore missing .env and rely on --dart-define values.
+  }
 
   // 2. Init Supabase
   await Supabase.initialize(
