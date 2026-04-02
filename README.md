@@ -71,7 +71,7 @@ flutter build web
 Use one of these approaches:
 
 - Deploy prebuilt output: run `flutter build web` locally/CI and deploy `build/web`.
-- Install Flutter in Vercel build before running the build command.
+- Let Vercel install Flutter and build from source (scripted in this repo).
 
 Example Vercel build command (bash):
 
@@ -88,3 +88,19 @@ flutter build web \
 ```
 
 Because the app now supports both `.env` and `--dart-define`, this command works without creating a `.env` file in Vercel.
+
+### Repo-ready Vercel setup
+
+This repository includes [scripts/vercel-build.sh](scripts/vercel-build.sh) and [vercel.json](vercel.json) is configured to call it.
+
+In Vercel project settings, set:
+
+- Framework Preset: `Other`
+- Build Command: leave empty (uses `vercel.json`)
+- Output Directory: leave empty (uses `vercel.json`)
+- Environment Variables:
+	- `SUPABASE_URL`
+	- `SUPABASE_ANON_KEY`
+	- `BASE_URL`
+
+After this, redeploy. The script installs Flutter, runs `flutter pub get`, and builds `build/web`.
