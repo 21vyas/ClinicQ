@@ -148,10 +148,13 @@ class QueueService {
     int? alertBefore,
     String? workingHoursStart,
     String? workingHoursEnd,
-    // Step 4 — dynamic fields
     bool? enableAge,
     bool? enableReason,
     List<Map<String, dynamic>>? customFields,
+    // Token format
+    String? tokenPrefix,
+    String? tokenFormat,
+    int? tokenPadding,
   }) async {
     try {
       await _client.rpc('update_hospital_settings', params: {
@@ -164,6 +167,9 @@ class QueueService {
         'p_enable_age':           enableAge,
         'p_enable_reason':        enableReason,
         'p_custom_fields':        customFields,
+        'p_token_prefix':         tokenPrefix,
+        'p_token_format':         tokenFormat,
+        'p_token_padding':        tokenPadding,
       });
       return QueueServiceResult.success(null);
     } on PostgrestException catch (e) {

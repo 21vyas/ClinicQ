@@ -116,6 +116,12 @@ class AuthService {
     }
   }
  
+  /// Returns true only when the current user has role = 'superadmin'.
+  Future<bool> isSuperAdmin() async {
+    final user = await getCurrentUser();
+    return user?.isSuperAdmin ?? false;
+  }
+
   /// Checks whether the current user already has a hospital configured.
   /// Returns the hospital map or null.
   Future<Map<String, dynamic>?> getUserHospital() async {

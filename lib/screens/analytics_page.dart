@@ -156,7 +156,7 @@ class _AnalyticsPageState extends ConsumerState<AnalyticsPage>
         title: Text('Analytics', style: GoogleFonts.dmSans(fontSize: 17, fontWeight: FontWeight.w700, color: AppColors.textPrimary)),
         actions: [
           IconButton(
-            onPressed: () => context.go('/patients'),
+            onPressed: () => context.go('/patients/$hospitalId'),
             icon: const Icon(Icons.people_outline_rounded, size: 20, color: AppColors.textSecondary),
             tooltip: 'Patients',
           ),
@@ -225,48 +225,58 @@ class _AnalyticsContent extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ListView(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 16),
       children: [
-        // ── KPI grid ──────────────────────────────────────
-        _KpiGrid(data: data),
-        const SizedBox(height: 16),
+        Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 960),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                // ── KPI grid ──────────────────────────────
+                _KpiGrid(data: data),
+                const SizedBox(height: 16),
 
-        // ── Visit type ────────────────────────────────────
-        if (data.visitTypeDist.isNotEmpty) ...[
-          _SectionCard(
-            title: 'Visit Type Distribution',
-            child: _VisitTypeChart(data: data),
+                // ── Visit type ────────────────────────────
+                if (data.visitTypeDist.isNotEmpty) ...[
+                  _SectionCard(
+                    title: 'Visit Type Distribution',
+                    child: _VisitTypeChart(data: data),
+                  ),
+                  const SizedBox(height: 16),
+                ],
+
+                // ── Peak hours ────────────────────────────
+                if (data.peakHours.isNotEmpty) ...[
+                  _SectionCard(
+                    title: 'Peak Hours',
+                    child: _PeakHoursChart(data: data),
+                  ),
+                  const SizedBox(height: 16),
+                ],
+
+                // ── Top reasons ───────────────────────────
+                if (data.topReasons.isNotEmpty) ...[
+                  _SectionCard(
+                    title: 'Top Visit Reasons',
+                    child: _TopReasonsChart(data: data),
+                  ),
+                  const SizedBox(height: 16),
+                ],
+
+                // ── Daily trend ───────────────────────────
+                if (data.dailyTotals.length > 1) ...[
+                  _SectionCard(
+                    title: 'Daily Trend',
+                    child: _DailyTrendChart(data: data),
+                  ),
+                ],
+
+                const SizedBox(height: 32),
+              ],
+            ),
           ),
-          const SizedBox(height: 16),
-        ],
-
-        // ── Peak hours ────────────────────────────────────
-        if (data.peakHours.isNotEmpty) ...[
-          _SectionCard(
-            title: 'Peak Hours',
-            child: _PeakHoursChart(data: data),
-          ),
-          const SizedBox(height: 16),
-        ],
-
-        // ── Top reasons ───────────────────────────────────
-        if (data.topReasons.isNotEmpty) ...[
-          _SectionCard(
-            title: 'Top Visit Reasons',
-            child: _TopReasonsChart(data: data),
-          ),
-          const SizedBox(height: 16),
-        ],
-
-        // ── Daily trend ───────────────────────────────────
-        if (data.dailyTotals.length > 1) ...[
-          _SectionCard(
-            title: 'Daily Trend',
-            child: _DailyTrendChart(data: data),
-          ),
-        ],
-
-        const SizedBox(height: 32),
+        ),
       ],
     );
   }
@@ -281,10 +291,8 @@ class _KpiGrid extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return LayoutBuilder(builder: (context, constraints) {
-      final w = constraints.maxWidth;
-      final cols = w >= 900 ? 4 : 2;
-      // Fixed height per card avoids aspect-ratio overflow on any screen
-      final cardH = w >= 600 ? 110.0 : 100.0;
+      final w    = constraints.maxWidth;
+      final cols = w >= 600 ? 4 : 2;
 
       final cards = [
         _KpiCard(
@@ -319,7 +327,7 @@ class _KpiGrid extends StatelessWidget {
         ),
       ];
 
-      // Build rows of `cols` cards
+      // Build rows of `cols` cards — IntrinsicHeight lets cards size naturally
       final rows = <Widget>[];
       for (var i = 0; i < cards.length; i += cols) {
         final rowCards = cards.sublist(i, (i + cols).clamp(0, cards.length));
@@ -329,9 +337,7 @@ class _KpiGrid extends StatelessWidget {
             children: [
               for (var j = 0; j < rowCards.length; j++) ...[
                 if (j > 0) const SizedBox(width: 12),
-                Expanded(
-                  child: SizedBox(height: cardH, child: rowCards[j]),
-                ),
+                Expanded(child: rowCards[j]),
               ],
               // Fill empty slots in last row
               for (var k = rowCards.length; k < cols; k++) ...[
@@ -382,7 +388,7 @@ class _KpiCard extends StatelessWidget {
     ),
     child: Column(
       crossAxisAlignment: CrossAxisAlignment.start,
-      mainAxisAlignment: MainAxisAlignment.center,
+      mainAxisSize: MainAxisSize.min,
       children: [
         Container(
           width: 32, height: 32,
@@ -401,7 +407,7 @@ class _KpiCard extends StatelessWidget {
                   fontSize: 24,
                   fontWeight: FontWeight.w700,
                   color: AppColors.textPrimary,
-                  height: 1)),
+                  height: 1.1)),
         ),
         if (subtitle != null) ...[
           const SizedBox(height: 2),
@@ -534,54 +540,75 @@ class _PeakHoursChart extends StatelessWidget {
   final AnalyticsData data;
   const _PeakHoursChart({required this.data});
 
+  static const _chartH = 90.0;
+  static const _barMax  = 74.0; // leaves 16px headroom for label + gap
+
   @override
   Widget build(BuildContext context) {
-    final maxCount = data.maxHourCount;
+    final maxCount    = data.maxHourCount;
     final clinicHours = List.generate(13, (i) => i + 8); // 8am–8pm
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         SizedBox(
-          height: 90,
+          height: _chartH,
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.end,
             children: clinicHours.map((hour) {
-              final match = data.peakHours.where((h) => h.hour == hour).toList();
+              final match  = data.peakHours.where((h) => h.hour == hour).toList();
               final count  = match.isEmpty ? 0 : match.first.count;
               final frac   = maxCount == 0 ? 0.0 : count / maxCount;
               final isPeak = data.busiesHour?.hour == hour;
+              final barColor = isPeak
+                  ? AppColors.accent
+                  : AppColors.primary.withValues(alpha: 0.45 + 0.45 * frac);
 
               return Expanded(
                 child: Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 2),
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.end,
-                    children: [
-                      if (count > 0)
-                        Text('$count',
-                            style: TextStyle(
-                                fontSize: 8,
-                                color: isPeak
-                                    ? AppColors.accent
-                                    : AppColors.textHint)),
-                      const SizedBox(height: 2),
-                      TweenAnimationBuilder<double>(
-                        tween: Tween(begin: 0, end: frac),
-                        duration: const Duration(milliseconds: 600),
-                        curve: Curves.easeOut,
-                        builder: (_, v, _) => Container(
-                          height: 76 * v + 2,
-                          decoration: BoxDecoration(
-                            color: isPeak
-                                ? AppColors.accent
-                                : AppColors.primary.withValues(alpha: 0.4 + 0.5 * v),
-                            borderRadius: const BorderRadius.vertical(
-                                top: Radius.circular(4)),
+                  // Stack: bar grows from bottom, label floats above it.
+                  // No Column stacking → no overflow possible.
+                  child: TweenAnimationBuilder<double>(
+                    tween: Tween(begin: 0, end: frac),
+                    duration: const Duration(milliseconds: 600),
+                    curve: Curves.easeOut,
+                    builder: (_, v, _) {
+                      final barH = _barMax * v + 2;
+                      return Stack(
+                        alignment: Alignment.bottomCenter,
+                        clipBehavior: Clip.none,
+                        children: [
+                          // Bar
+                          Container(
+                            height: barH,
+                            decoration: BoxDecoration(
+                              color: barColor,
+                              borderRadius: const BorderRadius.vertical(
+                                  top: Radius.circular(4)),
+                            ),
                           ),
-                        ),
-                      ),
-                    ],
+                          // Count label positioned above the bar
+                          if (count > 0)
+                            Positioned(
+                              bottom: barH + 2,
+                              left: 0,
+                              right: 0,
+                              child: Text(
+                                '$count',
+                                textAlign: TextAlign.center,
+                                style: TextStyle(
+                                  fontSize: 8,
+                                  fontWeight: FontWeight.w600,
+                                  color: isPeak
+                                      ? AppColors.accent
+                                      : AppColors.textHint,
+                                ),
+                              ),
+                            ),
+                        ],
+                      );
+                    },
                   ),
                 ),
               );
@@ -684,58 +711,137 @@ class _DailyTrendChart extends StatelessWidget {
   final AnalyticsData data;
   const _DailyTrendChart({required this.data});
 
+  static const _colorBusiest  = AppColors.accent;           // orange
+  static const _colorAboveAvg = AppColors.primary;          // teal
+  static const _colorBelowAvg = Color(0xFF6366F1);          // indigo
+
+  Color _barColor(int total, int maxTotal, double avg) {
+    if (total == maxTotal) return _colorBusiest;
+    if (total >= avg)      return _colorAboveAvg;
+    return _colorBelowAvg;
+  }
+
+  // Show d/m for ≤14 bars, day-only for more (avoids crowding)
+  String _dateLabel(DateTime d, int count) =>
+      count <= 14 ? '${d.day}/${d.month}' : '${d.day}';
+
   @override
   Widget build(BuildContext context) {
     final maxTotal = data.dailyTotals.isEmpty
         ? 1
-        : data.dailyTotals
-            .map((d) => d.total)
-            .reduce((a, b) => a > b ? a : b);
+        : data.dailyTotals.map((d) => d.total).reduce((a, b) => a > b ? a : b);
+    final avg = data.dailyTotals.isEmpty
+        ? 0.0
+        : data.dailyTotals.fold(0, (s, d) => s + d.total) /
+          data.dailyTotals.length;
+    final n = data.dailyTotals.length;
 
     return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        SizedBox(
-          height: 80,
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: data.dailyTotals.map((d) {
-              final frac = maxTotal == 0 ? 0.0 : d.total / maxTotal;
-              return Expanded(
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 3),
-                  child: TweenAnimationBuilder<double>(
-                    tween: Tween(begin: 0, end: frac),
-                    duration: const Duration(milliseconds: 600),
-                    curve: Curves.easeOut,
-                    builder: (_, v, _) => Container(
-                      height: 76 * v + 2,
-                      decoration: BoxDecoration(
-                        color: AppColors.primary.withValues(alpha: 0.35 + 0.65 * v),
-                        borderRadius: const BorderRadius.vertical(
-                            top: Radius.circular(4)),
+        // Legend
+        Wrap(
+          spacing: 14,
+          runSpacing: 4,
+          children: [
+            _LegendDot(color: _colorBusiest,  label: 'Busiest day'),
+            _LegendDot(color: _colorAboveAvg, label: 'Above avg'),
+            _LegendDot(color: _colorBelowAvg, label: 'Below avg'),
+          ],
+        ),
+        const SizedBox(height: 12),
+
+        // Bars — each column has bar + count label + date label
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.end,
+          children: data.dailyTotals.map((d) {
+            final frac  = maxTotal == 0 ? 0.0 : d.total / maxTotal;
+            final color = _barColor(d.total, maxTotal, avg);
+            final label = _dateLabel(d.date, n);
+
+            return Expanded(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 2),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    // Count above bar (only for busiest + above-avg to avoid clutter)
+                    if (d.total == maxTotal || d.total >= avg)
+                      Text(
+                        '${d.total}',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          fontSize: 8,
+                          fontWeight: FontWeight.w700,
+                          color: color,
+                        ),
+                      )
+                    else
+                      const SizedBox(height: 10),
+                    const SizedBox(height: 2),
+
+                    // Bar
+                    TweenAnimationBuilder<double>(
+                      tween: Tween(begin: 0, end: frac),
+                      duration: const Duration(milliseconds: 600),
+                      curve: Curves.easeOut,
+                      builder: (_, v, _) => Container(
+                        height: 60 * v + 2,
+                        decoration: BoxDecoration(
+                          color: color.withValues(alpha: 0.65 + 0.35 * v),
+                          borderRadius: const BorderRadius.vertical(
+                              top: Radius.circular(4)),
+                        ),
                       ),
                     ),
-                  ),
+
+                    const SizedBox(height: 4),
+
+                    // Date label below bar — same colour as bar
+                    Text(
+                      label,
+                      textAlign: TextAlign.center,
+                      overflow: TextOverflow.visible,
+                      style: TextStyle(
+                        fontSize: n <= 10 ? 9 : 7,
+                        fontWeight: d.total == maxTotal
+                            ? FontWeight.w700
+                            : FontWeight.w400,
+                        color: d.total == maxTotal
+                            ? color
+                            : AppColors.textHint,
+                      ),
+                    ),
+                  ],
                 ),
-              );
-            }).toList(),
-          ),
-        ),
-        const SizedBox(height: 8),
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Text(_fmtDate(data.dailyTotals.first.date),
-                style: const TextStyle(
-                    fontSize: 11, color: AppColors.textHint)),
-            Text(_fmtDate(data.dailyTotals.last.date),
-                style: const TextStyle(
-                    fontSize: 11, color: AppColors.textHint)),
-          ],
+              ),
+            );
+          }).toList(),
         ),
       ],
     );
   }
+}
 
-  String _fmtDate(DateTime d) => '${d.day}/${d.month}';
+class _LegendDot extends StatelessWidget {
+  final Color  color;
+  final String label;
+  const _LegendDot({required this.color, required this.label});
+
+  @override
+  Widget build(BuildContext context) => Row(
+    mainAxisSize: MainAxisSize.min,
+    children: [
+      Container(
+        width: 9, height: 9,
+        decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+      ),
+      const SizedBox(width: 4),
+      Text(label,
+          style: const TextStyle(
+              fontSize: 10,
+              fontWeight: FontWeight.w500,
+              color: AppColors.textHint)),
+    ],
+  );
 }

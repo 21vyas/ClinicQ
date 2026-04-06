@@ -9,6 +9,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../core/theme/app_theme.dart';
+import '../core/utils/csv_downloader.dart';
 import '../models/analytics_data.dart';
 import '../providers/auth_provider.dart';
 import '../providers/queue_provider.dart';
@@ -136,10 +137,11 @@ class _PatientsPageState extends ConsumerState<PatientsPage> {
       search:     _search.isEmpty ? null : _search,
     );
     final patientsAsync = ref.watch(_patientsProvider(query));
+    final loadedResult  = patientsAsync.asData?.value;
 
     return Scaffold(
       backgroundColor: AppColors.background,
-      appBar: _buildAppBar(),
+      appBar: _buildAppBar(hospitalId, loadedResult),
       body: Column(
         children: [
           // Search bar
@@ -179,7 +181,7 @@ class _PatientsPageState extends ConsumerState<PatientsPage> {
     );
   }
 
-  PreferredSizeWidget _buildAppBar() => AppBar(
+  PreferredSizeWidget _buildAppBar(String hospitalId, PatientsResult? result) => AppBar(
     backgroundColor: AppColors.surface,
     elevation: 0,
     surfaceTintColor: Colors.transparent,
@@ -190,8 +192,14 @@ class _PatientsPageState extends ConsumerState<PatientsPage> {
     title: Text('Patients', style: GoogleFonts.dmSans(
         fontSize: 17, fontWeight: FontWeight.w700, color: AppColors.textPrimary)),
     actions: [
+      if (result != null && result.patients.isNotEmpty)
+        IconButton(
+          onPressed: () => _exportCsv(result),
+          icon: const Icon(Icons.download_rounded, size: 20, color: AppColors.textSecondary),
+          tooltip: 'Export CSV',
+        ),
       IconButton(
-        onPressed: () => context.go('/analytics'),
+        onPressed: () => context.go('/analytics/$hospitalId'),
         icon: const Icon(Icons.bar_chart_rounded, size: 20, color: AppColors.textSecondary),
         tooltip: 'Analytics',
       ),
@@ -201,6 +209,28 @@ class _PatientsPageState extends ConsumerState<PatientsPage> {
       child: Container(height: 1, color: AppColors.border),
     ),
   );
+
+  void _exportCsv(PatientsResult result) {
+    final sb = StringBuffer();
+    sb.writeln('Name,Phone,Visit Count,First Visit,Last Visit,Last Reason');
+    for (final p in result.patients) {
+      sb.writeln([
+        _csvCell(p.name),
+        _csvCell(p.phone),
+        p.visitCount,
+        '${p.firstVisit.day}/${p.firstVisit.month}/${p.firstVisit.year}',
+        '${p.lastVisit.day}/${p.lastVisit.month}/${p.lastVisit.year}',
+        _csvCell(p.lastReason ?? ''),
+      ].join(','));
+    }
+    final date = DateTime.now();
+    final filename =
+        'patients_${date.year}${date.month.toString().padLeft(2,'0')}${date.day.toString().padLeft(2,'0')}.csv';
+    downloadCsv(sb.toString(), filename);
+  }
+
+  /// Wraps a cell value in quotes and escapes internal quotes.
+  String _csvCell(String v) => '"${v.replaceAll('"', '""')}"';
 }
 
 // ─────────────────────────────────────────────────────────

@@ -333,12 +333,15 @@ class _CheckInPageState extends ConsumerState<CheckInPage>
                         controller: _phoneCtrl,
                         keyboardType: TextInputType.phone,
                         textInputAction: TextInputAction.next,
-                        inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'[0-9+\-\s]'))],
-                        decoration: _dec(hint: '+91 98765 43210', icon: Icons.phone_outlined),
+                        inputFormatters: [
+                          FilteringTextInputFormatter.digitsOnly,
+                          LengthLimitingTextInputFormatter(10),
+                        ],
+                        decoration: _dec(hint: '9876543210', icon: Icons.phone_outlined),
                         validator: (v) {
                           if (v == null || v.trim().isEmpty) return 'Please enter your mobile number';
                           final d = v.replaceAll(RegExp(r'\D'), '');
-                          if (d.length < 7) return 'Enter a valid mobile number';
+                          if (d.length != 10) return 'Enter a valid 10-digit mobile number';
                           return null;
                         },
                       ),

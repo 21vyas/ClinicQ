@@ -157,8 +157,8 @@ class _TokenBodyState extends State<_TokenBody>
                   // Token disc
                   isServing
                       ? ScaleTransition(scale: _pulseAnim,
-                          child: _TokenDisc(token: s.tokenNumber))
-                      : _TokenDisc(token: s.tokenNumber),
+                          child: _TokenDisc(token: s.formattedToken))
+                      : _TokenDisc(token: s.formattedToken),
 
                   const SizedBox(height: 18),
 
@@ -265,37 +265,50 @@ class _TokenBodyState extends State<_TokenBody>
 // ─────────────────────────────────────────────────────────
 
 class _TokenDisc extends StatelessWidget {
-  final int token;
+  final String token;
   const _TokenDisc({required this.token});
 
   @override
   Widget build(BuildContext context) {
+    final screenW  = MediaQuery.of(context).size.width;
+    final discSize = (screenW * 0.38).clamp(128.0, 172.0);
+    // Inner usable width inside the circle (chord at ~70% of diameter)
+    final innerW   = discSize * 0.72;
+
     return Container(
-      width: 136,
-      height: 136,
+      width: discSize,
+      height: discSize,
       decoration: BoxDecoration(
         shape: BoxShape.circle,
         color: Colors.white.withOpacity(0.12),
         border: Border.all(color: Colors.white.withOpacity(0.3), width: 2),
       ),
-      child: Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text('TOKEN',
-                style: GoogleFonts.dmSans(
-                    fontSize: 10,
-                    fontWeight: FontWeight.w700,
-                    color: Colors.white.withOpacity(0.6),
-                    letterSpacing: 2.5)),
-            Text('$token',
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Text('TOKEN',
+              style: GoogleFonts.dmSans(
+                  fontSize: 10,
+                  fontWeight: FontWeight.w700,
+                  color: Colors.white.withOpacity(0.6),
+                  letterSpacing: 2.5)),
+          const SizedBox(height: 2),
+          SizedBox(
+            width: innerW,
+            child: FittedBox(
+              fit: BoxFit.scaleDown,
+              child: Text(
+                token,
+                maxLines: 1,
                 style: GoogleFonts.playfairDisplay(
-                    fontSize: 56,
+                    fontSize: discSize * 0.40,
                     fontWeight: FontWeight.w700,
                     color: Colors.white,
-                    height: 1.0)),
-          ],
-        ),
+                    height: 1.0),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }

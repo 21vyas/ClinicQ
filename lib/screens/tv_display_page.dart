@@ -425,13 +425,15 @@ class _CurrentTokenPanel extends StatelessWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            // "NOW SERVING" label
+            // Status label
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 7),
               decoration: BoxDecoration(
                 color: hasPatient
                     ? const Color(0xFF4ADE80).withOpacity(0.15)
-                    : Colors.white.withOpacity(0.06),
+                    : tv.totalWaiting > 0
+                        ? const Color(0xFFFBBF24).withOpacity(0.15)
+                        : Colors.white.withOpacity(0.06),
                 borderRadius: BorderRadius.circular(30),
               ),
               child: Row(
@@ -440,19 +442,28 @@ class _CurrentTokenPanel extends StatelessWidget {
                   if (hasPatient)
                     const Icon(Icons.campaign_rounded,
                         color: Color(0xFF4ADE80), size: 16)
+                  else if (tv.totalWaiting > 0)
+                    const Icon(Icons.people_outline_rounded,
+                        color: Color(0xFFFBBF24), size: 16)
                   else
                     Icon(Icons.hourglass_empty_rounded,
                         color: Colors.white.withOpacity(0.3), size: 16),
                   const SizedBox(width: 8),
                   Text(
-                    hasPatient ? 'NOW SERVING' : 'WAITING TO START',
+                    hasPatient
+                        ? 'NOW SERVING'
+                        : tv.totalWaiting > 0
+                            ? 'QUEUE OPEN'
+                            : 'NO PATIENTS YET',
                     style: GoogleFonts.dmSans(
                       fontSize: 13,
                       fontWeight: FontWeight.w700,
                       letterSpacing: 2.0,
                       color: hasPatient
                           ? const Color(0xFF4ADE80)
-                          : Colors.white.withOpacity(0.3),
+                          : tv.totalWaiting > 0
+                              ? const Color(0xFFFBBF24)
+                              : Colors.white.withOpacity(0.3),
                     ),
                   ),
                 ],
@@ -461,18 +472,43 @@ class _CurrentTokenPanel extends StatelessWidget {
 
             const SizedBox(height: 28),
 
-            // Big token number
+            // Big token number OR waiting count
             ScaleTransition(
               scale: hasPatient ? pulseAnim : const AlwaysStoppedAnimation(1.0),
-              child: Text(
-                hasPatient ? '${tv.currentTokenNumber}' : '—',
-                style: GoogleFonts.playfairDisplay(
-                  fontSize: _tokenFontSize(context),
-                  fontWeight: FontWeight.w700,
-                  color: Colors.white,
-                  height: 0.9,
-                ),
-              ),
+              child: tv.totalWaiting > 0 && !hasPatient
+                  ? Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          '${tv.totalWaiting}',
+                          style: GoogleFonts.playfairDisplay(
+                            fontSize: _tokenFontSize(context),
+                            fontWeight: FontWeight.w700,
+                            color: const Color(0xFFFBBF24),
+                            height: 0.9,
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        Text(
+                          tv.totalWaiting == 1 ? 'patient waiting' : 'patients waiting',
+                          style: GoogleFonts.dmSans(
+                            fontSize: _nameFontSize(context) * 0.75,
+                            fontWeight: FontWeight.w500,
+                            color: const Color(0xFFFBBF24).withOpacity(0.7),
+                            letterSpacing: 1.0,
+                          ),
+                        ),
+                      ],
+                    )
+                  : Text(
+                      hasPatient ? tv.formatToken(tv.currentTokenNumber) : '—',
+                      style: GoogleFonts.playfairDisplay(
+                        fontSize: _tokenFontSize(context),
+                        fontWeight: FontWeight.w700,
+                        color: Colors.white,
+                        height: 0.9,
+                      ),
+                    ),
             ),
 
             if (hasPatient) ...[
@@ -586,7 +622,7 @@ class _NextUpPanel extends StatelessWidget {
                     final t = e.value;
                     return Padding(
                       padding: const EdgeInsets.only(bottom: 10),
-                      child: _NextTokenRow(token: t, position: i + 1),
+                      child: _NextTokenRow(token: t, position: i + 1, display: tv),
                     );
                   }),
 
@@ -625,7 +661,8 @@ class _NextUpPanel extends StatelessWidget {
 class _NextTokenRow extends StatelessWidget {
   final TvNextToken token;
   final int position;
-  const _NextTokenRow({required this.token, required this.position});
+  final TvDisplay display;
+  const _NextTokenRow({required this.token, required this.position, required this.display});
 
   @override
   Widget build(BuildContext context) {
@@ -652,7 +689,7 @@ class _NextTokenRow extends StatelessWidget {
               ),
               child: Center(
                 child: Text(
-                  '${token.tokenNumber}',
+                  display.formatToken(token.tokenNumber),
                   style: GoogleFonts.playfairDisplay(
                       fontSize: 20,
                       fontWeight: FontWeight.w700,

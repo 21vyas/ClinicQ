@@ -16,6 +16,8 @@ import '../../screens/splash_screen.dart';
 import '../../screens/auth_callback_page.dart';
 import '../../screens/checkin_page.dart';
 import '../../screens/token_status_page.dart';
+import '../../screens/qr_checkin_page.dart';
+import '../../screens/superadmin_page.dart';
 import '../../core/constants/app_constants.dart';
 
 final routerProvider = Provider<GoRouter>((ref) {
@@ -34,6 +36,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       final isPublic = loc.startsWith('/checkin/') ||
           loc.startsWith('/token/')                ||
           loc.startsWith('/tv/')                   ||
+          loc.startsWith('/qr/')                   ||
           loc == '/login'                          ||
           loc == '/register'                       ||
           loc == '/auth/callback';
@@ -46,6 +49,13 @@ final routerProvider = Provider<GoRouter>((ref) {
         return hospital == null
             ? AppConstants.routeSetup
             : AppConstants.routeDashboard;
+      }
+
+      // Superadmin-only route guard
+      if (loc == '/superadmin') {
+        if (!isLoggedIn) return AppConstants.routeLogin;
+        final isSuper = await authService.isSuperAdmin();
+        if (!isSuper) return AppConstants.routeDashboard;
       }
 
       return null;
@@ -68,6 +78,17 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: '/tv/:hospitalId',
         builder: (_, s) =>
             TvDisplayPage(hospitalId: s.pathParameters['hospitalId']!),
+      ),
+      GoRoute(
+        path: '/qr/:hospitalId',
+        builder: (_, s) =>
+            QrCheckinPage(hospitalId: s.pathParameters['hospitalId']!),
+      ),
+
+      // ── Superadmin ───────────────────────────────────────
+      GoRoute(
+        path: '/superadmin',
+        pageBuilder: (_, s) => _fadePage(s, const SuperadminPage()),
       ),
 
       // ── OAuth callback ───────────────────────────────────

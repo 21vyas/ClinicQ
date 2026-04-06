@@ -23,7 +23,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
   void initState() {
     super.initState();
     _ctrl = AnimationController(
-        vsync: this, duration: const Duration(milliseconds: 800));
+        vsync: this, duration: const Duration(milliseconds: 600));
     _fadeAnim = Tween<double>(begin: 0, end: 1).animate(
         CurvedAnimation(parent: _ctrl, curve: Curves.easeOut));
     _scaleAnim = Tween<double>(begin: 0.85, end: 1).animate(
