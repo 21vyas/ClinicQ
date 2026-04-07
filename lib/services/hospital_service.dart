@@ -69,28 +69,38 @@ class HospitalService {
     }
   }
  
-  /// Fetches the hospital belonging to the current user.
+  /// Fetches the hospital for the current user via the get_my_hospital() RPC.
+  /// Works for both owners (admin) and staff members.
   Future<Hospital?> getUserHospital() async {
     final authUser = _client.auth.currentUser;
     if (authUser == null) return null;
- 
+
     try {
-      final userData = await _client
-          .from(AppConstants.tableUsers)
-          .select('id')
-          .eq('auth_id', authUser.id)
-          .maybeSingle();
- 
-      if (userData == null) return null;
- 
-      final data = await _client
-          .from(AppConstants.tableHospitals)
-          .select()
-          .eq('created_by', userData['id'] as String)
-          .maybeSingle();
- 
+      final data = await _client.rpc('get_my_hospital');
       if (data == null) return null;
-      return Hospital.fromJson(data);
+      final map = (data is Map<String, dynamic>)
+          ? data
+          : Map<String, dynamic>.from(data as Map);
+      return Hospital.fromJson(map);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  /// Like getUserHospital() but also returns the caller's hospital-level role.
+  Future<({Hospital hospital, String myRole})?> getUserHospitalWithRole() async {
+    final authUser = _client.auth.currentUser;
+    if (authUser == null) return null;
+
+    try {
+      final data = await _client.rpc('get_my_hospital');
+      if (data == null) return null;
+      final map = (data is Map<String, dynamic>)
+          ? data
+          : Map<String, dynamic>.from(data as Map);
+      final hospital = Hospital.fromJson(map);
+      final myRole   = (map['my_role'] as String?) ?? 'staff';
+      return (hospital: hospital, myRole: myRole);
     } catch (_) {
       return null;
     }
