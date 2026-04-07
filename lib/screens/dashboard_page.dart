@@ -11,11 +11,11 @@ import 'package:loading_animation_widget/loading_animation_widget.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 import '../core/constants/app_constants.dart';
 import '../core/theme/app_theme.dart';
+import '../models/hospital_full.dart';
 import '../models/queue_entry.dart';
 import '../models/queue_today.dart';
 import '../providers/auth_provider.dart';
 import '../providers/queue_provider.dart';
-import '../widgets/cq_button.dart';
 
 // ═════════════════════════════════════════════════════════
 // ROOT — resolves hospital from auth state
@@ -202,12 +202,15 @@ class _DashboardShellState extends ConsumerState<_DashboardShell>
 
   @override
   Widget build(BuildContext context) {
-    final queueAsync = ref.watch(queueTodayProvider(widget.hospitalId));
-    final isWide     = MediaQuery.of(context).size.width >= 900;
+    final queueAsync    = ref.watch(queueTodayProvider(widget.hospitalId));
+    final settings      = ref.watch(hospitalFullProvider(widget.hospitalId)).asData?.value?.settings;
+    final roleAsync     = ref.watch(hospitalRoleProvider);
+    final canManageTeam = roleAsync.asData?.value == 'admin';
+    final isWide        = MediaQuery.of(context).size.width >= 900;
 
     return Scaffold(
       backgroundColor: AppColors.background,
-      appBar: _buildAppBar(context, ref),
+      appBar: _buildAppBar(context, ref, canManageTeam: canManageTeam),
       body: queueAsync.when(
         loading: () => const Center(
             child: CircularProgressIndicator(color: AppColors.primary)),
@@ -231,6 +234,7 @@ class _DashboardShellState extends ConsumerState<_DashboardShell>
                   onSkip:        _skipEntry,
                   onReset:       _resetQueue,
                   tabCtrl:       _tabCtrl,
+                  settings:      settings,
                 )
               : _NarrowLayout(
                   queue:         queue,
@@ -242,29 +246,35 @@ class _DashboardShellState extends ConsumerState<_DashboardShell>
                   onSkip:        _skipEntry,
                   onReset:       _resetQueue,
                   tabCtrl:       _tabCtrl,
+                  settings:      settings,
                 );
         },
       ),
     );
   }
 
-  PreferredSizeWidget _buildAppBar(BuildContext context, WidgetRef ref) {
-    final isWide = MediaQuery.of(context).size.width >= 900;
-    final isMobile = MediaQuery.of(context).size.width < 600;
+  PreferredSizeWidget _buildAppBar(
+      BuildContext context, WidgetRef ref, {required bool canManageTeam}) {
+    final width    = MediaQuery.of(context).size.width;
+    final isWide   = width >= 900;
+    final isMobile = width < 600;
 
     return AppBar(
       backgroundColor: AppColors.surface,
       elevation: 0,
-      leadingWidth: isMobile ? 160 : 240,
+      surfaceTintColor: Colors.transparent,
+      // ── Leading: logo + name ─────────────────────────
+      leadingWidth: isMobile ? 180 : 260,
       leading: Padding(
-        padding: const EdgeInsets.only(left: 16),
+        padding: const EdgeInsets.only(left: 12),
         child: Row(
           children: [
             Container(
               width: 28, height: 28,
               decoration: BoxDecoration(
-                  color: AppColors.primary,
-                  borderRadius: BorderRadius.circular(8)),
+                color: AppColors.primary,
+                borderRadius: BorderRadius.circular(8),
+              ),
               child: const Icon(Icons.local_hospital_rounded,
                   size: 16, color: Colors.white),
             ),
@@ -273,72 +283,21 @@ class _DashboardShellState extends ConsumerState<_DashboardShell>
               child: Text(
                 widget.hospitalName,
                 overflow: TextOverflow.ellipsis,
+                maxLines: 1,
                 style: GoogleFonts.playfairDisplay(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w700,
-                    color: AppColors.textPrimary),
+                  fontSize: isMobile ? 14 : 16,
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.textPrimary,
+                ),
               ),
             ),
           ],
         ),
       ),
-      actions: [
-        // TV Display
-        _AppBarAction(
-          onPressed: () => context.go('/tv/${widget.hospitalId}'),
-          icon: Icons.tv_rounded,
-          label: 'TV',
-          color: Colors.indigo,
-          showLabel: isWide,
-        ),
-        // Analytics
-        _AppBarAction(
-          onPressed: () => context.go('/analytics/${widget.hospitalId}'),
-          icon: Icons.bar_chart_rounded,
-          label: 'Analytics',
-          color: Colors.blue,
-          showLabel: isWide,
-        ),
-        // Patients
-        _AppBarAction(
-          onPressed: () => context.go('/patients/${widget.hospitalId}'),
-          icon: Icons.people_outline_rounded,
-          label: 'Patients',
-          color: Colors.teal,
-          showLabel: isWide,
-        ),
-        // QR
-        _AppBarAction(
-          onPressed: () => _showQrSheet(context),
-          icon: Icons.qr_code_2_rounded,
-          label: 'QR',
-          color: Colors.amber[800]!,
-          showLabel: isWide,
-        ),
-        // Settings
-        _AppBarAction(
-          onPressed: () => context.go('/settings/${widget.hospitalId}'),
-          icon: Icons.settings_outlined,
-          label: 'Settings',
-          color: AppColors.primary,
-          showLabel: isWide,
-        ),
-        
-        const SizedBox(width: 4),
-        // Sign out
-        TextButton(
-          onPressed: () async {
-            await ref.read(authServiceProvider).logout();
-            if (context.mounted) context.go(AppConstants.routeLogin);
-          },
-          style: TextButton.styleFrom(
-            foregroundColor: Colors.red,
-            padding: const EdgeInsets.symmetric(horizontal: 12),
-          ),
-          child: const Text('Out', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
-        ),
-        const SizedBox(width: 8),
-      ],
+      // ── Actions ──────────────────────────────────────
+      actions: isMobile
+          ? _mobileActions(context, ref, canManageTeam: canManageTeam)
+          : _wideActions(context, ref, showLabel: isWide, canManageTeam: canManageTeam),
       bottom: PreferredSize(
         preferredSize: const Size.fromHeight(1),
         child: Container(height: 1, color: AppColors.border),
@@ -346,16 +305,145 @@ class _DashboardShellState extends ConsumerState<_DashboardShell>
     );
   }
 
-  void _showQrSheet(BuildContext context) {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (_) => _QrBottomSheet(
-        url:          _checkInUrl,
-        hospitalName: widget.hospitalName,
+  /// Mobile: QR icon + overflow popup + Sign Out
+  List<Widget> _mobileActions(BuildContext context, WidgetRef ref,
+      {required bool canManageTeam}) {
+    return [
+      IconButton(
+        onPressed: () => context.push('/qr/${widget.hospitalId}'),
+        icon: const Icon(Icons.qr_code_2_rounded, size: 22),
+        color: Colors.amber[800],
+        tooltip: 'Check-in QR',
+      ),
+      PopupMenuButton<String>(
+        icon: const Icon(Icons.more_vert_rounded,
+            color: AppColors.textSecondary, size: 22),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        onSelected: (v) => _handleMenuAction(context, ref, v, canManageTeam: canManageTeam),
+        itemBuilder: (_) => [
+          _popupItem('tv',        Icons.tv_rounded,             'TV Display',  Colors.indigo),
+          _popupItem('analytics', Icons.bar_chart_rounded,      'Analytics',   Colors.blue),
+          _popupItem('patients',  Icons.people_outline_rounded, 'Patients',    Colors.teal),
+          if (canManageTeam)
+            _popupItem('team',      Icons.group_outlined,         'Team',        Colors.purple),
+          _popupItem('settings',  Icons.settings_outlined,      'Settings',    AppColors.primary),
+          const PopupMenuDivider(),
+          _popupItem('signout',   Icons.logout_rounded,         'Sign Out',    Colors.red),
+        ],
+      ),
+      const SizedBox(width: 4),
+    ];
+  }
+
+  /// Wide/desktop: full labelled or icon buttons
+  List<Widget> _wideActions(
+      BuildContext context, WidgetRef ref,
+      {required bool showLabel, required bool canManageTeam}) {
+    return [
+      _AppBarAction(
+        onPressed: () => context.go('/tv/${widget.hospitalId}'),
+        icon: Icons.tv_rounded,
+        label: 'TV',
+        color: Colors.indigo,
+        showLabel: showLabel,
+      ),
+      _AppBarAction(
+        onPressed: () => context.go('/analytics/${widget.hospitalId}'),
+        icon: Icons.bar_chart_rounded,
+        label: 'Analytics',
+        color: Colors.blue,
+        showLabel: showLabel,
+      ),
+      _AppBarAction(
+        onPressed: () => context.go('/patients/${widget.hospitalId}'),
+        icon: Icons.people_outline_rounded,
+        label: 'Patients',
+        color: Colors.teal,
+        showLabel: showLabel,
+      ),
+      _AppBarAction(
+        onPressed: () => context.push('/qr/${widget.hospitalId}'),
+        icon: Icons.qr_code_2_rounded,
+        label: 'QR',
+        color: Colors.amber[800]!,
+        showLabel: showLabel,
+      ),
+      if (canManageTeam)
+        _AppBarAction(
+          onPressed: () => context.go('/team/${widget.hospitalId}'),
+          icon: Icons.group_outlined,
+          label: 'Team',
+          color: Colors.purple,
+          showLabel: showLabel,
+        ),
+      _AppBarAction(
+        onPressed: () => context.go('/settings/${widget.hospitalId}'),
+        icon: Icons.settings_outlined,
+        label: 'Settings',
+        color: AppColors.primary,
+        showLabel: showLabel,
+      ),
+      const SizedBox(width: 4),
+      TextButton(
+        onPressed: () async {
+          await ref.read(authServiceProvider).logout();
+          if (context.mounted) context.go(AppConstants.routeLogin);
+        },
+        style: TextButton.styleFrom(
+          foregroundColor: Colors.red,
+          padding: const EdgeInsets.symmetric(horizontal: 12),
+        ),
+        child: const Text('Out',
+            style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
+      ),
+      const SizedBox(width: 8),
+    ];
+  }
+
+  PopupMenuItem<String> _popupItem(
+      String value, IconData icon, String label, Color color) =>
+    PopupMenuItem(
+      value: value,
+      child: Row(
+        children: [
+          Icon(icon, color: color, size: 18),
+          const SizedBox(width: 12),
+          Text(label,
+              style: GoogleFonts.dmSans(
+                  fontSize: 14, fontWeight: FontWeight.w500)),
+        ],
       ),
     );
+
+  void _handleMenuAction(
+      BuildContext context, WidgetRef ref, String action,
+      {required bool canManageTeam}) {
+    switch (action) {
+      case 'tv':
+        context.go('/tv/${widget.hospitalId}');
+        return;
+      case 'analytics':
+        context.go('/analytics/${widget.hospitalId}');
+        return;
+      case 'patients':
+        context.go('/patients/${widget.hospitalId}');
+        return;
+      case 'team':
+        if (!canManageTeam) {
+          _showSnack('Only admins can access Team Management.', isError: true);
+          return;
+        }
+        context.go('/team/${widget.hospitalId}');
+        return;
+      case 'settings':
+        context.go('/settings/${widget.hospitalId}');
+        return;
+      case 'signout':
+        ref.read(authServiceProvider).logout().then((_) {
+          if (context.mounted) context.go(AppConstants.routeLogin);
+        });
+        return;
+    }
   }
 }
 
@@ -393,7 +481,7 @@ class _AppBarAction extends StatelessWidget {
         label: Text(label, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
         style: TextButton.styleFrom(
           foregroundColor: color,
-          backgroundColor: color.withOpacity(0.08),
+          backgroundColor: color.withValues(alpha: 0.08),
           padding: const EdgeInsets.symmetric(horizontal: 12),
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
         ),
@@ -419,6 +507,7 @@ class _WideLayout extends StatelessWidget {
   final Future<void> Function(String, int) onSkip;
   final VoidCallback onReset;
   final TabController tabCtrl;
+  final HospitalSettings? settings;
 
   const _WideLayout({
     required this.queue,
@@ -431,6 +520,7 @@ class _WideLayout extends StatelessWidget {
     required this.onSkip,
     required this.onReset,
     required this.tabCtrl,
+    this.settings,
   });
 
   @override
@@ -454,6 +544,7 @@ class _WideLayout extends StatelessWidget {
                     queue:      queue,
                     onCallNext: onCallNext,
                     onComplete: onComplete,
+                    settings:   settings,
                   ),
                   const SizedBox(height: 16),
                   _StatsGrid(queue: queue),
@@ -483,16 +574,19 @@ class _WideLayout extends StatelessWidget {
                       emptyMsg:   'No patients waiting',
                       onSkip:     onSkip,
                       showSkip:   true,
+                      settings:   settings,
                     ),
                     _QueueList(
                       entries:    queue.doneEntries,
                       emptyMsg:   'No completed patients yet',
                       showSkip:   false,
+                      settings:   settings,
                     ),
                     _QueueList(
                       entries:    queue.skippedEntries,
                       emptyMsg:   'No skipped patients',
                       showSkip:   false,
+                      settings:   settings,
                     ),
                   ],
                 ),
@@ -519,6 +613,7 @@ class _NarrowLayout extends StatelessWidget {
   final Future<void> Function(String, int) onSkip;
   final VoidCallback onReset;
   final TabController tabCtrl;
+  final HospitalSettings? settings;
 
   const _NarrowLayout({
     required this.queue,
@@ -530,6 +625,7 @@ class _NarrowLayout extends StatelessWidget {
     required this.onSkip,
     required this.onReset,
     required this.tabCtrl,
+    this.settings,
   });
 
   @override
@@ -546,6 +642,7 @@ class _NarrowLayout extends StatelessWidget {
                 queue:      queue,
                 onCallNext: onCallNext,
                 onComplete: onComplete,
+                settings:   settings,
               ),
               const SizedBox(height: 10),
               _StatsRow(counts: queue.counts),
@@ -563,16 +660,19 @@ class _NarrowLayout extends StatelessWidget {
                 emptyMsg: 'No patients waiting',
                 onSkip:   onSkip,
                 showSkip: true,
+                settings: settings,
               ),
               _QueueList(
                 entries:  queue.doneEntries,
                 emptyMsg: 'No completed patients yet',
                 showSkip: false,
+                settings: settings,
               ),
               _QueueList(
                 entries:  queue.skippedEntries,
                 emptyMsg: 'No skipped patients',
                 showSkip: false,
+                settings: settings,
               ),
             ],
           ),
@@ -591,11 +691,13 @@ class _ServingPanel extends StatefulWidget {
   final QueueToday queue;
   final VoidCallback onCallNext;
   final Future<void> Function(String) onComplete;
+  final HospitalSettings? settings;
 
   const _ServingPanel({
     required this.queue,
     required this.onCallNext,
     required this.onComplete,
+    this.settings,
   });
 
   @override
@@ -643,7 +745,8 @@ class _ServingPanelState extends State<_ServingPanel> {
               children: [
                 // Token circle
                 _AnimatedTokenCircle(
-                  token:    widget.queue.currentTokenNumber,
+                  token:    widget.settings?.formatToken(widget.queue.currentTokenNumber)
+                              ?? '${widget.queue.currentTokenNumber}',
                   isActive: serving != null,
                 ),
                 const SizedBox(width: 14),
@@ -656,7 +759,7 @@ class _ServingPanelState extends State<_ServingPanel> {
                         style: TextStyle(
                           fontSize: 11,
                           fontWeight: FontWeight.w600,
-                          color: Colors.white.withOpacity(0.6),
+                          color: Colors.white.withValues(alpha: 0.6),
                           letterSpacing: 0.8,
                         ),
                       ),
@@ -678,13 +781,13 @@ class _ServingPanelState extends State<_ServingPanel> {
                             if (serving.patientPhone.isNotEmpty) ...[
                               Icon(Icons.phone_outlined,
                                   size: 11,
-                                  color: Colors.white.withOpacity(0.55)),
+                                  color: Colors.white.withValues(alpha: 0.55)),
                               const SizedBox(width: 4),
                               Flexible(
                                 child: Text(serving.patientPhone,
                                     style: TextStyle(
                                       fontSize: 11,
-                                      color: Colors.white.withOpacity(0.55),
+                                      color: Colors.white.withValues(alpha: 0.55),
                                     ),
                                     maxLines: 1,
                                     overflow: TextOverflow.ellipsis),
@@ -694,14 +797,14 @@ class _ServingPanelState extends State<_ServingPanel> {
                             if (serving.reason != null) ...[
                               Icon(Icons.medical_services_outlined,
                                   size: 11,
-                                  color: Colors.white.withOpacity(0.55)),
+                                  color: Colors.white.withValues(alpha: 0.55)),
                               const SizedBox(width: 4),
                               Expanded(
                                 child: Text(
                                   serving.reason!,
                                   style: TextStyle(
                                     fontSize: 11,
-                                    color: Colors.white.withOpacity(0.55),
+                                    color: Colors.white.withValues(alpha: 0.55),
                                   ),
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
@@ -719,7 +822,7 @@ class _ServingPanelState extends State<_ServingPanel> {
                   padding: const EdgeInsets.symmetric(
                       horizontal: 10, vertical: 5),
                   decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.12),
+                    color: Colors.white.withValues(alpha: 0.12),
                     borderRadius: BorderRadius.circular(20),
                   ),
                   child: Text(
@@ -794,7 +897,7 @@ class _ServingPanelState extends State<_ServingPanel> {
                   icon:    Icons.campaign_rounded,
                   color:   waiting > 0
                       ? const Color(0xFFE8820C)
-                      : Colors.white.withOpacity(0.3),
+                      : Colors.white.withValues(alpha: 0.3),
                   loading: _callingNext,
                   onTap:   waiting > 0 ? _handleCallNext : null,
                   fullWidth: true,
@@ -811,7 +914,7 @@ class _ServingPanelState extends State<_ServingPanel> {
 // ── Animated token circle ─────────────────────────────────
 
 class _AnimatedTokenCircle extends StatefulWidget {
-  final int token;
+  final String token;
   final bool isActive;
   const _AnimatedTokenCircle({required this.token, required this.isActive});
 
@@ -823,7 +926,7 @@ class _AnimatedTokenCircleState extends State<_AnimatedTokenCircle>
     with SingleTickerProviderStateMixin {
   late AnimationController _ctrl;
   late Animation<double> _pulse;
-  int? _prevToken;
+  String? _prevToken;
 
   @override
   void initState() {
@@ -863,10 +966,10 @@ class _AnimatedTokenCircleState extends State<_AnimatedTokenCircle>
         height: 62,
         decoration: BoxDecoration(
           shape: BoxShape.circle,
-          color: Colors.white.withOpacity(
+          color: Colors.white.withValues(alpha: 
               widget.isActive ? 0.18 : 0.1),
           border: Border.all(
-              color: Colors.white.withOpacity(
+              color: Colors.white.withValues(alpha: 
                   widget.isActive ? 0.35 : 0.2),
               width: 1.5),
         ),
@@ -875,7 +978,7 @@ class _AnimatedTokenCircleState extends State<_AnimatedTokenCircle>
             child: Padding(
               padding: const EdgeInsets.all(8.0),
               child: Text(
-                widget.token > 0 ? '${widget.token}' : '—',
+                widget.token.isNotEmpty && widget.token != '0' ? widget.token : '—',
                 style: GoogleFonts.playfairDisplay(
                   fontSize: 26,
                   fontWeight: FontWeight.w700,
@@ -916,7 +1019,7 @@ class _ActionButton extends StatelessWidget {
         onPressed: onTap == null || loading ? null : onTap,
         style: ElevatedButton.styleFrom(
           backgroundColor: color,
-          disabledBackgroundColor: color.withOpacity(0.5),
+          disabledBackgroundColor: color.withValues(alpha: 0.5),
           foregroundColor: Colors.white,
           shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(10)),
@@ -987,8 +1090,8 @@ class _StatsGrid extends StatelessWidget {
             )),
             const SizedBox(width: 8),
             Expanded(child: _StatCard(
-              label:  'Avg Wait',
-              value:  '${queue.effectiveAvgWait}m',
+              label:  'Avg Wait Time',
+              value:  '${queue.effectiveAvgWait}min',
               icon:   Icons.schedule_rounded,
               color:  const Color(0xFF6366F1),
             )),
@@ -1017,9 +1120,9 @@ class _StatCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.07),
+        color: color.withValues(alpha: 0.07),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: color.withOpacity(0.18)),
+        border: Border.all(color: color.withValues(alpha: 0.18)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1081,9 +1184,9 @@ class _StatChip extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 8),
         decoration: BoxDecoration(
-          color: color.withOpacity(0.08),
+          color: color.withValues(alpha: 0.08),
           borderRadius: BorderRadius.circular(10),
-          border: Border.all(color: color.withOpacity(0.2)),
+          border: Border.all(color: color.withValues(alpha: 0.2)),
         ),
         child: Column(
           children: [
@@ -1146,12 +1249,14 @@ class _QueueList extends StatelessWidget {
   final String emptyMsg;
   final Future<void> Function(String, int)? onSkip;
   final bool showSkip;
+  final HospitalSettings? settings;
 
   const _QueueList({
     required this.entries,
     required this.emptyMsg,
     this.onSkip,
     required this.showSkip,
+    this.settings,
   });
 
   @override
@@ -1162,7 +1267,7 @@ class _QueueList extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             Icon(Icons.inbox_outlined,
-                size: 44, color: AppColors.textHint.withOpacity(0.4)),
+                size: 44, color: AppColors.textHint.withValues(alpha: 0.4)),
             const SizedBox(height: 12),
             Text(emptyMsg,
                 style: const TextStyle(
@@ -1179,11 +1284,12 @@ class _QueueList extends StatelessWidget {
       itemBuilder: (_, i) {
         final e = entries[i];
         return _QueueTile(
-          entry:  e,
-          onSkip: showSkip && onSkip != null
+          entry:    e,
+          settings: settings,
+          onSkip:   showSkip && onSkip != null
               ? () => onSkip!(e.id, e.tokenNumber)
               : null,
-          onTap:  () => _showPatientSheet(context, e),
+          onTap:    () => _showPatientSheet(context, e),
         );
       },
     );
@@ -1203,8 +1309,9 @@ class _QueueTile extends StatelessWidget {
   final QueueEntry entry;
   final VoidCallback? onSkip;
   final VoidCallback? onTap;
+  final HospitalSettings? settings;
 
-  const _QueueTile({required this.entry, this.onSkip, this.onTap});
+  const _QueueTile({required this.entry, this.onSkip, this.onTap, this.settings});
 
   @override
   Widget build(BuildContext context) {
@@ -1221,7 +1328,7 @@ class _QueueTile extends StatelessWidget {
           borderRadius: BorderRadius.circular(14),
           border: Border.all(
             color: entry.status == QueueStatus.inProgress
-                ? AppColors.success.withOpacity(0.35)
+                ? AppColors.success.withValues(alpha: 0.35)
                 : AppColors.border,
             width: entry.status == QueueStatus.inProgress ? 1.5 : 1,
           ),
@@ -1234,16 +1341,17 @@ class _QueueTile extends StatelessWidget {
               Container(
                 width: 46, height: 46,
                 decoration: BoxDecoration(
-                  color: color.withOpacity(0.1),
+                  color: color.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: color.withOpacity(0.3)),
+                  border: Border.all(color: color.withValues(alpha: 0.3)),
                 ),
                 child: Center(
                   child: FittedBox(
                     fit: BoxFit.scaleDown,
                     child: Padding(
                       padding: const EdgeInsets.all(4.0),
-                      child: Text('${entry.tokenNumber}',
+                      child: Text(
+                          settings?.formatToken(entry.tokenNumber) ?? '${entry.tokenNumber}',
                           style: GoogleFonts.playfairDisplay(
                               fontSize: 18,
                               fontWeight: FontWeight.w700,
@@ -1563,76 +1671,6 @@ class _MiniQrCard extends StatelessWidget {
   }
 }
 
-class _QrBottomSheet extends StatelessWidget {
-  final String url;
-  final String hospitalName;
-  const _QrBottomSheet({required this.url, required this.hospitalName});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      decoration: const BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
-      padding: const EdgeInsets.fromLTRB(24, 16, 24, 40),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Container(
-              width: 40, height: 4,
-              decoration: BoxDecoration(
-                  color: AppColors.border,
-                  borderRadius: BorderRadius.circular(2))),
-          const SizedBox(height: 20),
-          Text('Patient Check-in',
-              style: GoogleFonts.playfairDisplay(
-                  fontSize: 22, fontWeight: FontWeight.w700)),
-          const SizedBox(height: 4),
-          Text('Patients scan this to register in the queue',
-              textAlign: TextAlign.center,
-              style: const TextStyle(
-                  color: AppColors.textSecondary, fontSize: 14)),
-          const SizedBox(height: 24),
-          QrImageView(
-            data: url,
-            version: QrVersions.auto,
-            size: 200,
-            backgroundColor: Colors.white,
-            eyeStyle: const QrEyeStyle(
-                eyeShape: QrEyeShape.square, color: AppColors.primary),
-            dataModuleStyle: const QrDataModuleStyle(
-                dataModuleShape: QrDataModuleShape.square,
-                color: AppColors.textPrimary),
-          ),
-          const SizedBox(height: 16),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-            decoration: BoxDecoration(
-                color: AppColors.surfaceVariant,
-                borderRadius: BorderRadius.circular(10)),
-            child: Text(url,
-                textAlign: TextAlign.center,
-                style: GoogleFonts.dmSans(
-                    fontSize: 11, color: AppColors.textSecondary)),
-          ),
-          const SizedBox(height: 16),
-          CQButton(
-            label: 'Copy Check-in Link',
-            icon:  Icons.copy_rounded,
-            onPressed: () {
-              Clipboard.setData(ClipboardData(text: url));
-              Navigator.pop(context);
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Link copied!')),
-              );
-            },
-          ),
-        ],
-      ),
-    );
-  }
-}
-
 // ═════════════════════════════════════════════════════════
 // MISC WIDGETS
 // ═════════════════════════════════════════════════════════
@@ -1686,7 +1724,7 @@ class _LiveDotState extends State<_LiveDot>
         width: 7, height: 7,
         decoration: BoxDecoration(
           shape: BoxShape.circle,
-          color: AppColors.success.withOpacity(0.4 + 0.6 * _ctrl.value),
+          color: AppColors.success.withValues(alpha: 0.4 + 0.6 * _ctrl.value),
         ),
       ),
     );
@@ -1708,7 +1746,7 @@ class _ResetButton extends StatelessWidget {
         label: const Text('Reset Today\'s Queue'),
         style: OutlinedButton.styleFrom(
           foregroundColor: AppColors.error,
-          side: BorderSide(color: AppColors.error.withOpacity(0.4)),
+          side: BorderSide(color: AppColors.error.withValues(alpha: 0.4)),
           shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(10)),
         ),
