@@ -39,6 +39,7 @@ class HospitalSettings {
   final int tokenLimit;
   final int avgTimePerPatient;
   final int alertBefore;
+  final String tokenPrefix;
   final String workingHoursStart;
   final String workingHoursEnd;
   // Step 4 — dynamic fields
@@ -50,6 +51,7 @@ class HospitalSettings {
     required this.tokenLimit,
     required this.avgTimePerPatient,
     required this.alertBefore,
+    this.tokenPrefix = '',
     required this.workingHoursStart,
     required this.workingHoursEnd,
     this.enableAge    = true,
@@ -73,11 +75,20 @@ class HospitalSettings {
       tokenLimit:         (json['token_limit']          as num?)?.toInt() ?? 100,
       avgTimePerPatient:  (json['avg_time_per_patient'] as num?)?.toInt() ?? 5,
       alertBefore:        (json['alert_before']         as num?)?.toInt() ?? 3,
+      tokenPrefix:        json['token_prefix']          as String? ?? '',
       workingHoursStart:  json['working_hours_start']   as String? ?? '09:00',
       workingHoursEnd:    json['working_hours_end']     as String? ?? '18:00',
       enableAge:          json['enable_age']            as bool?   ?? true,
       enableReason:       json['enable_reason']         as bool?   ?? true,
       customFields:       customFields,
     );
+  }
+
+  String formatToken(int tokenNumber) {
+    final normalizedPrefix = tokenPrefix.trim();
+    final normalizedNumber = tokenNumber.toString().padLeft(3, '0');
+    return normalizedPrefix.isEmpty
+        ? normalizedNumber
+        : '$normalizedPrefix$normalizedNumber';
   }
 }

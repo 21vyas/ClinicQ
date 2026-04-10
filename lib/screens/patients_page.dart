@@ -191,7 +191,7 @@ class _PatientsPageState extends ConsumerState<PatientsPage> {
         fontSize: 17, fontWeight: FontWeight.w700, color: AppColors.textPrimary)),
     actions: [
       IconButton(
-        onPressed: () => context.go('/analytics'),
+        onPressed: () => context.go('/analytics/${widget.hospitalId}'),
         icon: const Icon(Icons.bar_chart_rounded, size: 20, color: AppColors.textSecondary),
         tooltip: 'Analytics',
       ),

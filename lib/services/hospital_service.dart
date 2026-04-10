@@ -71,6 +71,12 @@ class HospitalService {
  
   /// Fetches the hospital belonging to the current user.
   Future<Hospital?> getUserHospital() async {
+    final scoped = await getUserHospitalWithRole();
+    return scoped?.hospital;
+  }
+
+  /// Fetches the current user's first active hospital membership with role.
+  Future<UserHospitalScope?> getUserHospitalWithRole() async {
     final authUser = _client.auth.currentUser;
     if (authUser == null) return null;
  
@@ -82,18 +88,51 @@ class HospitalService {
           .maybeSingle();
  
       if (userData == null) return null;
+
+      final userId = userData['id'] as String;
+
+      final membershipData = await _client
+          .from('hospital_users')
+          .select('hospital_id, role')
+          .eq('user_id', userId)
+          .eq('is_active', true)
+          .limit(1)
+          .maybeSingle();
+
+      if (membershipData != null) {
+        final hospitalData = await _client
+            .from(AppConstants.tableHospitals)
+            .select()
+            .eq('id', membershipData['hospital_id'] as String)
+            .maybeSingle();
+
+        if (hospitalData != null) {
+          return UserHospitalScope(
+            hospital: Hospital.fromJson(hospitalData),
+            myRole: (membershipData['role'] as String?) ?? 'staff',
+          );
+        }
+      }
  
       final data = await _client
           .from(AppConstants.tableHospitals)
           .select()
-          .eq('created_by', userData['id'] as String)
+          .eq('created_by', userId)
           .maybeSingle();
  
       if (data == null) return null;
-      return Hospital.fromJson(data);
+      return UserHospitalScope(
+        hospital: Hospital.fromJson(data),
+        myRole: 'admin',
+      );
     } catch (_) {
       return null;
     }
+  }
+
+  Future<String?> getUserHospitalRole() async {
+    final scoped = await getUserHospitalWithRole();
+    return scoped?.myRole;
   }
  
   // ── helpers ──────────────────────────────────
@@ -129,5 +168,15 @@ class HospitalResult {
  
   factory HospitalResult.failure(String msg) =>
       HospitalResult._(isSuccess: false, errorMessage: msg);
+}
+
+class UserHospitalScope {
+  final Hospital hospital;
+  final String myRole;
+
+  const UserHospitalScope({
+    required this.hospital,
+    required this.myRole,
+  });
 }
  

@@ -73,6 +73,11 @@ class HospitalNotifier extends AsyncNotifier<Hospital?> {
 final hospitalProvider = AsyncNotifierProvider<HospitalNotifier, Hospital?>(
   HospitalNotifier.new,
 );
+
+final hospitalRoleProvider = FutureProvider<String?>((ref) async {
+  ref.watch(appUserProvider);
+  return ref.read(hospitalServiceProvider).getUserHospitalRole();
+});
  
 // ─────────────────────────────────────────────
 // Auth loading state (for button spinners)

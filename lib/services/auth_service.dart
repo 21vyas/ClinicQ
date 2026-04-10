@@ -115,6 +115,24 @@ class AuthService {
       return null;
     }
   }
+
+  /// True when the current user has the global `super_admin` role.
+  Future<bool> isSuperAdmin() async {
+    final authUser = currentAuthUser;
+    if (authUser == null) return false;
+
+    try {
+      final data = await _client
+          .from(AppConstants.tableUsers)
+          .select('role')
+          .eq('auth_id', authUser.id)
+          .maybeSingle();
+
+      return (data?['role'] as String?) == 'super_admin';
+    } catch (_) {
+      return false;
+    }
+  }
  
   /// Checks whether the current user already has a hospital configured.
   /// Returns the hospital map or null.

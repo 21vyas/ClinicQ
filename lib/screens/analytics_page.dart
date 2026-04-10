@@ -156,7 +156,7 @@ class _AnalyticsPageState extends ConsumerState<AnalyticsPage>
         title: Text('Analytics', style: GoogleFonts.dmSans(fontSize: 17, fontWeight: FontWeight.w700, color: AppColors.textPrimary)),
         actions: [
           IconButton(
-            onPressed: () => context.go('/patients'),
+            onPressed: () => context.go('/patients/$hospitalId'),
             icon: const Icon(Icons.people_outline_rounded, size: 20, color: AppColors.textSecondary),
             tooltip: 'Patients',
           ),
