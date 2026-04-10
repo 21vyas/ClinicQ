@@ -465,7 +465,7 @@ class _CurrentTokenPanel extends StatelessWidget {
             ScaleTransition(
               scale: hasPatient ? pulseAnim : const AlwaysStoppedAnimation(1.0),
               child: Text(
-                hasPatient ? '${tv.currentTokenNumber}' : '—',
+                hasPatient ? tv.formatToken(tv.currentTokenNumber) : '—',
                 style: GoogleFonts.playfairDisplay(
                   fontSize: _tokenFontSize(context),
                   fontWeight: FontWeight.w700,
@@ -586,7 +586,7 @@ class _NextUpPanel extends StatelessWidget {
                     final t = e.value;
                     return Padding(
                       padding: const EdgeInsets.only(bottom: 10),
-                      child: _NextTokenRow(token: t, position: i + 1),
+                      child: _NextTokenRow(token: t, position: i + 1, display: tv),
                     );
                   }),
 
@@ -625,7 +625,8 @@ class _NextUpPanel extends StatelessWidget {
 class _NextTokenRow extends StatelessWidget {
   final TvNextToken token;
   final int position;
-  const _NextTokenRow({required this.token, required this.position});
+  final TvDisplay display;
+  const _NextTokenRow({required this.token, required this.position, required this.display});
 
   @override
   Widget build(BuildContext context) {
@@ -652,7 +653,7 @@ class _NextTokenRow extends StatelessWidget {
               ),
               child: Center(
                 child: Text(
-                  '${token.tokenNumber}',
+                  display.formatToken(token.tokenNumber),
                   style: GoogleFonts.playfairDisplay(
                       fontSize: 20,
                       fontWeight: FontWeight.w700,

@@ -157,8 +157,8 @@ class _TokenBodyState extends State<_TokenBody>
                   // Token disc
                   isServing
                       ? ScaleTransition(scale: _pulseAnim,
-                          child: _TokenDisc(token: s.tokenNumber))
-                      : _TokenDisc(token: s.tokenNumber),
+                        child: _TokenDisc(token: s.formattedToken))
+                      : _TokenDisc(token: s.formattedToken),
 
                   const SizedBox(height: 18),
 
@@ -224,7 +224,7 @@ class _TokenBodyState extends State<_TokenBody>
 
                     // ── Currently serving indicator ───────
                     if (s.currentTokenNumber > 0 && !isServing)
-                      _CurrentTokenCard(token: s.currentTokenNumber),
+                      _CurrentTokenCard(token: s.formatToken(s.currentTokenNumber)),
 
                     const SizedBox(height: 24),
 
@@ -265,7 +265,7 @@ class _TokenBodyState extends State<_TokenBody>
 // ─────────────────────────────────────────────────────────
 
 class _TokenDisc extends StatelessWidget {
-  final int token;
+  final String token;
   const _TokenDisc({required this.token});
 
   @override
@@ -288,7 +288,7 @@ class _TokenDisc extends StatelessWidget {
                     fontWeight: FontWeight.w700,
                     color: Colors.white.withOpacity(0.6),
                     letterSpacing: 2.5)),
-            Text('$token',
+            Text(token,
                 style: GoogleFonts.playfairDisplay(
                     fontSize: 56,
                     fontWeight: FontWeight.w700,
@@ -645,7 +645,7 @@ class _AlertCard extends StatelessWidget {
 }
 
 class _CurrentTokenCard extends StatelessWidget {
-  final int token;
+  final String token;
   const _CurrentTokenCard({required this.token});
 
   @override
@@ -677,7 +677,7 @@ class _CurrentTokenCard extends StatelessWidget {
               borderRadius: BorderRadius.circular(12),
             ),
             child: Center(
-              child: Text('$token',
+              child: Text(token,
                   style: GoogleFonts.playfairDisplay(
                       fontSize: 24,
                       fontWeight: FontWeight.w700,

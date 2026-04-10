@@ -1,5 +1,7 @@
 // lib/models/tv_display.dart
 
+import 'hospital_full.dart';
+
 class TvNextToken {
   final int tokenNumber;
   final String patientName;
@@ -28,6 +30,9 @@ class TvDisplay {
   final int totalWaiting;
   final int totalDone;
   final int avgWaitMins;
+  final String tokenPrefix;
+  final TokenFormat tokenFormat;
+  final int tokenPadding;
 
   const TvDisplay({
     required this.hospitalName,
@@ -39,6 +44,9 @@ class TvDisplay {
     required this.totalWaiting,
     required this.totalDone,
     required this.avgWaitMins,
+    this.tokenPrefix = '',
+    this.tokenFormat = TokenFormat.numeric,
+    this.tokenPadding = 2,
   });
 
   factory TvDisplay.fromJson(Map<String, dynamic> json) {
@@ -56,6 +64,13 @@ class TvDisplay {
             .toList()
         : <TvNextToken>[];
 
+    // Parse token format
+    final formatStr = json['token_format'] as String? ?? 'numeric';
+    final tokenFormat = TokenFormat.values.firstWhere(
+      (f) => f.value == formatStr,
+      orElse: () => TokenFormat.numeric,
+    );
+
     return TvDisplay(
       hospitalName:        json['hospital_name'] as String? ?? '',
       hospitalAddress:     json['hospital_address'] as String?,
@@ -66,6 +81,22 @@ class TvDisplay {
       totalWaiting:        (json['total_waiting'] as num?)?.toInt() ?? 0,
       totalDone:           (json['total_done'] as num?)?.toInt() ?? 0,
       avgWaitMins:         (json['avg_wait_mins'] as num?)?.toInt() ?? 0,
+      tokenPrefix:         json['token_prefix'] as String? ?? '',
+      tokenFormat:         tokenFormat,
+      tokenPadding:        (json['token_padding'] as num?)?.toInt() ?? 2,
     );
+  }
+
+  /// Format a raw token number using this TV display's settings.
+  String formatToken(int number) {
+    if (number <= 0) return '—';
+    switch (tokenFormat) {
+      case TokenFormat.numeric:
+        return '$number';
+      case TokenFormat.prefix:
+      case TokenFormat.custom:
+        final padded = number.toString().padLeft(tokenPadding, '0');
+        return '$tokenPrefix$padded';
+    }
   }
 }

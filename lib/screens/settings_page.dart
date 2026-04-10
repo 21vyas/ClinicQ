@@ -23,6 +23,7 @@ class SettingsPage extends ConsumerStatefulWidget {
 class _SettingsPageState extends ConsumerState<SettingsPage>
     with SingleTickerProviderStateMixin {
   final _tokenLimitCtrl  = TextEditingController();
+  final _tokenPrefixCtrl = TextEditingController();
   final _avgTimeCtrl     = TextEditingController();
   final _alertBeforeCtrl = TextEditingController();
   final _startTimeCtrl   = TextEditingController();
@@ -30,6 +31,8 @@ class _SettingsPageState extends ConsumerState<SettingsPage>
 
   bool _enableAge    = true;
   bool _enableReason = true;
+  late TokenFormat _tokenFormat;
+  late int _tokenPadding;
   final List<CustomField> _customFields = [];
 
   bool    _isLoaded  = false;
@@ -52,6 +55,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage>
   void dispose() {
     _animCtrl.dispose();
     _tokenLimitCtrl.dispose();
+    _tokenPrefixCtrl.dispose();
     _avgTimeCtrl.dispose();
     _alertBeforeCtrl.dispose();
     _startTimeCtrl.dispose();
@@ -62,12 +66,15 @@ class _SettingsPageState extends ConsumerState<SettingsPage>
   void _populate(HospitalSettings s) {
     if (_isLoaded) return;
     _tokenLimitCtrl.text  = '${s.tokenLimit}';
+    _tokenPrefixCtrl.text = s.tokenPrefix;
     _avgTimeCtrl.text     = '${s.avgTimePerPatient}';
     _alertBeforeCtrl.text = '${s.alertBefore}';
     _startTimeCtrl.text   = s.workingHoursStart;
     _endTimeCtrl.text     = s.workingHoursEnd;
     _enableAge            = s.enableAge;
     _enableReason         = s.enableReason;
+    _tokenFormat          = s.tokenFormat;
+    _tokenPadding         = s.tokenPadding;
     _customFields..clear()..addAll(s.customFields);
     _isLoaded = true;
   }
@@ -102,6 +109,9 @@ class _SettingsPageState extends ConsumerState<SettingsPage>
       enableAge:         _enableAge,
       enableReason:      _enableReason,
       customFields:      _customFields.map((f) => f.toJson()).toList(),
+      tokenPrefix:       _tokenPrefixCtrl.text.trim(),
+      tokenFormat:       _tokenFormat,
+      tokenPadding:      _tokenPadding,
     );
 
     if (!mounted) return;
@@ -198,6 +208,15 @@ class _SettingsPageState extends ConsumerState<SettingsPage>
         _NumRow(label: 'Daily Token Limit',   subtitle: 'Max tokens issued per day', ctrl: _tokenLimitCtrl,  suffix: 'tokens'),
         _RowDivider(),
         _NumRow(label: 'Alert Before',         subtitle: 'Notify patient N tokens before turn', ctrl: _alertBeforeCtrl, suffix: 'tokens'),
+        _RowDivider(),
+        _TokenFormatSection(
+          prefixCtrl: _tokenPrefixCtrl,
+          format: _tokenFormat,
+          padding: _tokenPadding,
+          onFormatChanged: (f) => setState(() => _tokenFormat = f),
+          onPaddingChanged: (p) => setState(() => _tokenPadding = p),
+          onPrefixChanged: () => setState(() {}),
+        ),
       ]),
       const SizedBox(height: 14),
       _SectionCard(icon: Icons.schedule_rounded, title: 'Wait Time', children: [
@@ -629,6 +648,305 @@ class _NumRow extends StatelessWidget {
       )),
     ]),
   );
+}
+
+class _TokenFormatSection extends StatelessWidget {
+  final TextEditingController prefixCtrl;
+  final TokenFormat            format;
+  final int                    padding;
+  final void Function(TokenFormat) onFormatChanged;
+  final void Function(int)         onPaddingChanged;
+  final VoidCallback               onPrefixChanged;
+
+  const _TokenFormatSection({
+    required this.prefixCtrl,
+    required this.format,
+    required this.padding,
+    required this.onFormatChanged,
+    required this.onPaddingChanged,
+    required this.onPrefixChanged,
+  });
+
+  // Build a live preview string
+  String _preview() {
+    if (format == TokenFormat.numeric) return '1   2   3   …';
+    final p  = prefixCtrl.text.isEmpty ? 'A' : prefixCtrl.text;
+    final a  = 1.toString().padLeft(padding, '0');
+    final b  = 2.toString().padLeft(padding, '0');
+    return '$p$a   $p$b   …';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final showPrefix = format != TokenFormat.numeric;
+
+    return Container(
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppColors.border),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Header
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 10),
+            child: Row(
+              children: [
+                const Icon(Icons.confirmation_number_rounded,
+                    size: 18, color: AppColors.primary),
+                const SizedBox(width: 8),
+                Text(
+                  'Token Format',
+                  style: GoogleFonts.dmSans(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.textPrimary,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Container(height: 1, color: AppColors.border),
+
+          Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Format selector chips
+                Text(
+                  'Format Style',
+                  style: GoogleFonts.dmSans(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.textSecondary,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Wrap(
+                  spacing: 8,
+                  children: TokenFormat.values.map((f) {
+                    final selected = f == format;
+                    return ChoiceChip(
+                      label: Text(f.label),
+                      selected: selected,
+                      onSelected: (_) => onFormatChanged(f),
+                      selectedColor:
+                          AppColors.primary.withOpacity(0.12),
+                      labelStyle: GoogleFonts.dmSans(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        color: selected
+                            ? AppColors.primary
+                            : AppColors.textSecondary,
+                      ),
+                      side: BorderSide(
+                        color: selected
+                            ? AppColors.primary
+                            : AppColors.border,
+                      ),
+                      backgroundColor: AppColors.surface,
+                      showCheckmark: false,
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8)),
+                    );
+                  }).toList(),
+                ),
+
+                // Prefix + padding (only when not numeric)
+                if (showPrefix) ...[
+                  const SizedBox(height: 16),
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Prefix input
+                      Expanded(
+                        flex: 2,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Prefix',
+                              style: GoogleFonts.dmSans(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
+                                color: AppColors.textSecondary,
+                              ),
+                            ),
+                            const SizedBox(height: 6),
+                            TextField(
+                              controller: prefixCtrl,
+                              onChanged: (_) => onPrefixChanged(),
+                              maxLength: 8,
+                              decoration: InputDecoration(
+                                hintText: 'e.g. A, City-',
+                                counterText: '',
+                                border: OutlineInputBorder(
+                                  borderRadius:
+                                      BorderRadius.circular(10),
+                                  borderSide: const BorderSide(
+                                      color: AppColors.border),
+                                ),
+                                enabledBorder: OutlineInputBorder(
+                                  borderRadius:
+                                      BorderRadius.circular(10),
+                                  borderSide: const BorderSide(
+                                      color: AppColors.border),
+                                ),
+                                focusedBorder: OutlineInputBorder(
+                                  borderRadius:
+                                      BorderRadius.circular(10),
+                                  borderSide: const BorderSide(
+                                      color: AppColors.primary,
+                                      width: 1.5),
+                                ),
+                                filled: true,
+                                fillColor: AppColors.background,
+                                contentPadding:
+                                    const EdgeInsets.symmetric(
+                                        horizontal: 12, vertical: 12),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+
+                      // Padding selector
+                      Expanded(
+                        flex: 3,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Number Padding',
+                              style: GoogleFonts.dmSans(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
+                                color: AppColors.textSecondary,
+                              ),
+                            ),
+                            const SizedBox(height: 6),
+                            Row(
+                              children: [
+                                _PadChip(
+                                  label: '1  (1)',
+                                  value: 1,
+                                  selected: padding,
+                                  onTap: onPaddingChanged,
+                                ),
+                                const SizedBox(width: 6),
+                                _PadChip(
+                                  label: '01',
+                                  value: 2,
+                                  selected: padding,
+                                  onTap: onPaddingChanged,
+                                ),
+                                const SizedBox(width: 6),
+                                _PadChip(
+                                  label: '001',
+                                  value: 3,
+                                  selected: padding,
+                                  onTap: onPaddingChanged,
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+
+                // Live preview
+                const SizedBox(height: 16),
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 14, vertical: 12),
+                  decoration: BoxDecoration(
+                    color: AppColors.primarySurface,
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(
+                        color: AppColors.primary.withOpacity(0.15)),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.visibility_outlined,
+                          size: 14, color: AppColors.primary),
+                      const SizedBox(width: 8),
+                      Text(
+                        'Preview: ',
+                        style: GoogleFonts.dmSans(
+                          fontSize: 12,
+                          color: AppColors.primary,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      Text(
+                        _preview(),
+                        style: GoogleFonts.playfairDisplay(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w700,
+                          color: AppColors.primary,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _PadChip extends StatelessWidget {
+  final String label;
+  final int    value;
+  final int    selected;
+  final void Function(int) onTap;
+
+  const _PadChip({
+    required this.label,
+    required this.value,
+    required this.selected,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final isSelected = value == selected;
+    return GestureDetector(
+      onTap: () => onTap(value),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        decoration: BoxDecoration(
+          color: isSelected
+              ? AppColors.primary.withOpacity(0.12)
+              : AppColors.surface,
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(
+            color: isSelected ? AppColors.primary : AppColors.border,
+          ),
+        ),
+        child: Text(
+          label,
+          style: GoogleFonts.dmSans(
+            fontSize: 12,
+            fontWeight: FontWeight.w600,
+            color: isSelected
+                ? AppColors.primary
+                : AppColors.textSecondary,
+          ),
+        ),
+      ),
+    );
+  }
 }
 
 class _TimeRow extends StatelessWidget {
